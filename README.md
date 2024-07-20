@@ -1,0 +1,2 @@
+# dnxplore
+Xploring Django Ninja 
