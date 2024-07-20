@@ -1,7 +1,10 @@
 # dnxplore
 Xploring Django Ninja 
 
+# For Ubuntu
+
 ```
-pip install django-ninja
-pip install mysqlclient
+sudo apt install pkgconf
+sudo apt install libmysqlclient-dev
+pip install -r requirements.txt
 ```

@@ -1,9 +1,10 @@
 from pathlib import Path
 
 try:
-    from statuskeeper.localsettings import LSDATABASES
+    from statuskeeper.localsettings import LSDATABASES, MY_ALLOWED_HOSTS
 except ImportError:
     LSDATABASES = None
+    MY_ALLOWED_HOSTS = []
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -18,7 +19,7 @@ SECRET_KEY = 'django-insecure-ntcc^zsetz6&*(6qr5jydk$7^6=wzmrqe$w2e(qe@ffp5xudv=
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = MY_ALLOWED_HOSTS
 
 
 # Application definition
