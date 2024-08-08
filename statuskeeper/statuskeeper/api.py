@@ -4,6 +4,9 @@ from ninja import NinjaAPI, Schema
 from django.shortcuts import get_object_or_404
 from statusmaster.models import Employee, Department
 
+"""
+API Master to manage the relevant models.
+"""
 api = NinjaAPI()
 
 class DepartmentIn(Schema):
