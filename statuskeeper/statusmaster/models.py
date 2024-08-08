@@ -1,5 +1,15 @@
 from django.db import models
 
+class Scan(models.Model):
+    name = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=255, default='pending')
+
+class Progress(models.Model):
+    scan = models.ForeignKey(Scan, related_name='progress', on_delete=models.CASCADE)
+    progress_percentage = models.IntegerField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
 class Department(models.Model):
     title = models.CharField(max_length=100)
 

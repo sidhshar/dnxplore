@@ -1,3 +1,6 @@
 django
 django-ninja
 mysqlclient
+ninja-jwt
+pydantic
+python-dotenv

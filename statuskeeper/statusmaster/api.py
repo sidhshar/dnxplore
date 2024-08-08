@@ -1,14 +1,71 @@
 from datetime import date
+import logging
 from typing import List
 from ninja import NinjaAPI, Schema
 from django.shortcuts import get_object_or_404
-from statusmaster.models import Employee, Department
+
+from .models import Scan, Progress
+from .models import Employee, Department
+from .schemas import ScanSchema, ProgressSchema
+
+
+from ninja.security import django_auth
+from ninja_jwt.authentication import JWTAuth
+from django.contrib.auth.models import User
+
+
+api = NinjaAPI(auth=JWTAuth())
+
+logger = logging.getLogger(__name__)
 
 """
-API Master to manage the relevant models.
+API Master to manage the scan models.
 """
-api = NinjaAPI()
 
+@api.post("/token/")
+def token(request, username: str, password: str):
+    user = authenticate(username=username, password=password)
+    if user is not None:
+        token = RefreshToken.for_user(user)
+        return {
+            'refresh': str(token),
+            'access': str(token.access_token),
+        }
+    return {"error": "Invalid credentials"}
+
+@api.post("/scans/", auth=JWTAuth())
+def create_scan(request, name: str):
+    scan = Scan.objects.create(name=name)
+    logger.debug(f"Created scan: {scan.id}")
+    return {"id": scan.id, "name": scan.name, "status": scan.status}
+
+@api.get("/scans/{scan_id}/", auth=JWTAuth())
+def get_scan(request, scan_id: int):
+    scan = get_object_or_404(Scan, id=scan_id)
+    progress = scan.progress.all()
+    logger.debug(f"Retrieved scan: {scan.id}")
+    return {
+        "id": scan.id,
+        "name": scan.name,
+        "status": scan.status,
+        "progress": [{"percentage": p.progress_percentage, "timestamp": p.timestamp} for p in progress]
+    }
+
+@api.post("/scans/{scan_id}/progress/", auth=JWTAuth())
+def update_progress(request, scan_id: int, progress_percentage: int):
+    scan = get_object_or_404(Scan, id=scan_id)
+    Progress.objects.create(scan=scan, progress_percentage=progress_percentage)
+    logger.debug(f"Updated progress for scan: {scan.id} to {progress_percentage}%")
+    if progress_percentage >= 100:
+        scan.status = "completed"
+        scan.save()
+    return {"status": "progress updated"}
+
+
+
+"""
+OLD Schemas. Delete later.
+"""
 class DepartmentIn(Schema):
     title: str
 
