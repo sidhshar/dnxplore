@@ -10,6 +10,8 @@ class Progress(models.Model):
     progress_percentage = models.IntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
+
+#---------------------- OLD MODELS. DELETE LATER ----------------------#
 class Department(models.Model):
     title = models.CharField(max_length=100)
 
