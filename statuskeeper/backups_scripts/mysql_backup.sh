@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Variables
-DB_HOST="13.201.96.49"            # MySQL Host (usually localhost)
-DB_USER="speedscanuser"        # MySQL User
+DB_HOST="127.0.0.1"            # MySQL Host (usually localhost)
+DB_USER="root"        # MySQL User
 DB_PASSWORD="<pass>"    # MySQL Password
 DB_NAME="dbspeedscan"    # MySQL Database name
 BACKUP_DIR="/home/ubuntu/backups"    # Directory to store backups

@@ -1,3 +1,12 @@
+# Grant user access to execute mysqldump
+sudo docker exec -it mysql-container mysql -u root -p
+
+GRANT PROCESS, SELECT, LOCK TABLES, SHOW VIEW, EVENT, TRIGGER ON *.* TO 'speedscanuser'@'127.0.0.1';
+FLUSH PRIVILEGES;
+
+EXIT;
+
+
 # Backup script for MySql
 
 chmod +x mysql_backup.sh
