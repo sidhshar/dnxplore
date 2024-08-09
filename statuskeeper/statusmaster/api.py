@@ -3,11 +3,12 @@ import logging
 from typing import List
 from ninja import NinjaAPI, Schema
 from django.shortcuts import get_object_or_404
-
+from django.contrib.auth import authenticate
 from .models import Scan, Progress
 from .models import Employee, Department
 from .schemas import ScanSchema, ProgressSchema
-
+from ninja_jwt.tokens import RefreshToken
+from ninja_jwt.authentication import JWTAuthentication
 
 from ninja.security import django_auth
 from ninja_jwt.authentication import JWTAuth
@@ -24,6 +25,7 @@ API Master to manage the scan models.
 
 @api.post("/token/")
 def token(request, username: str, password: str):
+    print("[token] Got New token request")
     user = authenticate(username=username, password=password)
     if user is not None:
         token = RefreshToken.for_user(user)
