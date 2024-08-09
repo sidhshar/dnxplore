@@ -6,16 +6,18 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 from .models import Scan, Progress
 from .models import Employee, Department
-from .schemas import ScanSchema, ProgressSchema
+# from .schemas import ScanSchema, ProgressSchema
+from .schemas import AuthSchema, ScanInSchema, ScanOutSchema, ProgressInSchema, ScanUpdateSchema
 from ninja_jwt.tokens import RefreshToken
-from ninja_jwt.authentication import JWTAuthentication
 
 from ninja.security import django_auth
 from ninja_jwt.authentication import JWTAuth
 from django.contrib.auth.models import User
+from django.contrib.auth.hashers import make_password
 
 
-api = NinjaAPI(auth=JWTAuth())
+# api = NinjaAPI(auth=JWTAuth())
+api = NinjaAPI()
 
 logger = logging.getLogger(__name__)
 
@@ -23,23 +25,56 @@ logger = logging.getLogger(__name__)
 API Master to manage the scan models.
 """
 
-@api.post("/token/")
-def token(request, username: str, password: str):
-    print("[token] Got New token request")
-    user = authenticate(username=username, password=password)
-    if user is not None:
-        token = RefreshToken.for_user(user)
-        return {
-            'refresh': str(token),
-            'access': str(token.access_token),
-        }
-    return {"error": "Invalid credentials"}
+class UserSchema(Schema):
+    username: str
+    password: str
+
+class TokenSchema(Schema):
+    access: str
+    refresh: str
+
+@api.post("/register/", response={201: UserSchema, 400: dict})
+def register(request, payload: UserSchema):
+    print("[register] Got New register request")
+    if User.objects.filter(username=payload.username).exists():
+        return 400, {"error": "User with this username already exists"}
+    
+    user = User.objects.create(
+        username=payload.username,
+        password=make_password(payload.password)
+    )
+    return 201, UserSchema(username=user.username, password="********")
+
+@api.post("/token/", response={200: TokenSchema, 401: dict})
+def login(request, payload: UserSchema):
+    user = authenticate(username=payload.username, password=payload.password)
+    if not user:
+        return 401, {"error": "Invalid credentials"}
+    
+    refresh = RefreshToken.for_user(user)
+    return {
+        "access": str(refresh.access_token),
+        "refresh": str(refresh)
+    }
 
 @api.post("/scans/", auth=JWTAuth())
-def create_scan(request, name: str):
-    scan = Scan.objects.create(name=name)
+def create_scan(request, payload: ScanInSchema):
+    scan = Scan.objects.create(**payload.dict())
     logger.debug(f"Created scan: {scan.id}")
-    return {"id": scan.id, "name": scan.name, "status": scan.status}
+    # return {"id": scan.id, "name": scan.name, "status": scan.status}
+    return 200, ScanOutSchema(id=scan.id, name=scan.name, status=scan.status)
+
+@api.put("/scans/{scan_id}/", response={200: dict, 404: dict})
+def update_scan_name(request, scan_id: int, payload: ScanUpdateSchema):
+    scan = get_object_or_404(Scan, id=scan_id)
+    scan.name = payload.name
+    scan.save()
+    return {"status": "success", "message": f"Scan name updated to {scan.name}"}
+
+@api.get("/scans/latest/", auth=JWTAuth(), response=List[ScanOutSchema])
+def get_scan(request):
+    latest_scans = Scan.objects.all().order_by('-created_at')[:10]
+    return latest_scans
 
 @api.get("/scans/{scan_id}/", auth=JWTAuth())
 def get_scan(request, scan_id: int):
@@ -54,11 +89,11 @@ def get_scan(request, scan_id: int):
     }
 
 @api.post("/scans/{scan_id}/progress/", auth=JWTAuth())
-def update_progress(request, scan_id: int, progress_percentage: int):
-    scan = get_object_or_404(Scan, id=scan_id)
-    Progress.objects.create(scan=scan, progress_percentage=progress_percentage)
-    logger.debug(f"Updated progress for scan: {scan.id} to {progress_percentage}%")
-    if progress_percentage >= 100:
+def update_progress(request, scan_id: int, payload: ProgressInSchema):
+    scan = get_object_or_404(Scan, id=payload.scan_id)
+    Progress.objects.create(scan=scan, progress_percentage=payload.progress_percentage)
+    logger.debug(f"Updated progress for scan: {scan.id} to {payload.progress_percentage}%")
+    if payload.progress_percentage >= 100:
         scan.status = "completed"
         scan.save()
     return {"status": "progress updated"}
