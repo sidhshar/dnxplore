@@ -1,4 +1,5 @@
 statuskeeper/statuskeeper/localsettings.py
+statuskeeper/statusmaster/debug_scripts/ls.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
