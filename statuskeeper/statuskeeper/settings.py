@@ -2,8 +2,9 @@ from pathlib import Path
 from datetime import timedelta
 
 try:
-    from statuskeeper.statuskeeper.ls import LSDATABASES, MY_ALLOWED_HOSTS
-except ImportError:
+    from .localsettings import LSDATABASES, MY_ALLOWED_HOSTS
+except ImportError as e:
+    print("***Error in loading Local settings", e)
     LSDATABASES = None
     MY_ALLOWED_HOSTS = []
 
@@ -68,6 +69,7 @@ WSGI_APPLICATION = 'statuskeeper.wsgi.application'
 
 if LSDATABASES:
     DATABASES = LSDATABASES
+    print("Using database host: %s ..." % DATABASES['default']['HOST'],)
 else:
     DATABASES = {
         'default': {
@@ -75,6 +77,7 @@ else:
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+    print("Using sqlite database..")
 
 
 # Password validation
