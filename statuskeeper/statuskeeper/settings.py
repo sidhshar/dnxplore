@@ -2,7 +2,7 @@ from pathlib import Path
 from datetime import timedelta
 
 try:
-    from statuskeeper.localsettings import LSDATABASES, MY_ALLOWED_HOSTS
+    from statuskeeper.statuskeeper.ls import LSDATABASES, MY_ALLOWED_HOSTS
 except ImportError:
     LSDATABASES = None
     MY_ALLOWED_HOSTS = []
