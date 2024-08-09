@@ -57,6 +57,12 @@ def login(request, payload: UserSchema):
         "refresh": str(refresh)
     }
 
+
+@api.get("/scanslatest/", auth=JWTAuth(), response=List[ScanOutSchema])
+def get_scan(request):
+    latest_scans = Scan.objects.all().order_by('-created_at')[:10]
+    return latest_scans
+
 @api.post("/scans/", auth=JWTAuth())
 def create_scan(request, payload: ScanInSchema):
     scan = Scan.objects.create(**payload.dict())
@@ -70,11 +76,6 @@ def update_scan_name(request, scan_id: int, payload: ScanUpdateSchema):
     scan.name = payload.name
     scan.save()
     return {"status": "success", "message": f"Scan name updated to {scan.name}"}
-
-@api.get("/scans/latest/", auth=JWTAuth(), response=List[ScanOutSchema])
-def get_scan(request):
-    latest_scans = Scan.objects.all().order_by('-created_at')[:10]
-    return latest_scans
 
 @api.get("/scans/{scan_id}/", auth=JWTAuth())
 def get_scan(request, scan_id: int):
