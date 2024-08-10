@@ -1,0 +1,876 @@
+<h1 id="ai-master-api-documentation">AI Master API Documentation</h1>
+<h1 id="introduction">Introduction</h1>
+<p>The AI Master API is designed to help users create monitoring systems without the need for coding. Simply provide your compliance objectives, controls, and activities. The AI will handle the rest, suggesting dynamic workflows to meet your requirements.</p>
+<h2 id="understanding-monitor-concepts">Understanding "Monitor" concepts</h2>
+<p>Note: there are two different concepts for "monitor" in our API:</p>
+<ol>
+<li>
+<p><strong>Monitor at Runtime</strong> (<code>monitor</code>):</p>
+</li>
+<li>
+<p>This is similar to a final tax form.</p>
+</li>
+<li>
+<p>Use this when you want to interact with the monitor including running results</p>
+</li>
+<li>
+<p><strong>Monitor at Edit</strong> (<code>edit</code>):</p>
+</li>
+<li>This is akin to a session with a tax expert to prepare your tax form.</li>
+<li>Use this when you are in the process of create or edit a monitor</li>
+</ol>
+<p>These two concepts share specs but are not necessarily the same (e.g., playbook of chatbot only in <code>edit</code>)
+<code>monitor_id</code> and <code>edit_id</code> are NOT the same. <code>POST /monitor</code> get <code>monitor_id</code>, <code>POST /monitor/edit</code> get <code>edit_id</code></p>
+<ol>
+<li><strong>Checks in each Monitor</strong></li>
+<li>Each monitor has one or many check(s). Each check specify a audition activity applied on the data source. </li>
+<li>The check has two field: "description" is for display on UI to help understand what it will do, "instruction" is the actual prompt for LLM. e.g..,</li>
+</ol>
+<pre><code class="language-json">{
+      &quot;instruction&quot;: &quot;Review call logs between prospective students and enrollment counselors. Identify counselor's words (ignore student's words) to see if it has instance of profanity words. If you find any such instances, set the compliant result as 'failed'; otherwise, the result is 'passed'.&quot;,
+      &quot;description&quot;: &quot;Check for profanity words in the call logs between prospective students and enrollment counselors.&quot;
+}
+</code></pre>
+<p><strong>Example</strong>:</p>
+<p>When the UI uses a chatbot to help users collect inputs and explain how the monitor will work, it is "Monitor at Edit".</p>
+<p><strong>Create or Change a Monitor</strong>:
+  - <code>POST /monitor/edit</code>
+  - <code>POST /monitor/&lt;id&gt;/edit</code></p>
+<p>Once created, querying it will get "Monitor at Runtime". <strong>All monitors have to be created with <code>edit</code></strong>, even for cases without human inputs. That is 1. POST /monitor/edit -&gt; 2. POST /monitor (use edit_id from the first step)</p>
+<p><strong>Get Monitor at Runtime</strong>:
+  - <code>GET /monitor/&lt;id&gt;</code></p>
+<p>For detailed terminology specifications, please refer to the <a href="https://docs.google.com/document/d/1so5Y_nqZ6z7NkbNo5l5MKOixTaqtjyVBg3LzCl7MDtQ/edit">Monitor Documentation</a>.</p>
+<h2 id="how-to-use-this-api">How to use this API</h2>
+<h3 id="authentication-tbd">Authentication (TBD)</h3>
+<p>APIs require Bearer Authentication header</p>
+<p><code>Authorization: Bearer &lt;token&gt;</code></p>
+<p>In different environments, we use different methods for authentication:</p>
+<ul>
+<li><strong>Development Instances</strong>: We use a simple fixed token in the <code>Authorization</code> header.</li>
+<li><strong>Production Instances</strong>: We use Firebase user authentication tokens</li>
+</ul>
+<h3 id="api-endpoints">API endpoints</h3>
+<ul>
+<li>Development: https://api.v1.dev.ai.lunarinfra.info</li>
+<li>Production: https://api.v1.ai.lunarinfra.info</li>
+<li>Local: http://127.0.0.1:8000</li>
+</ul>
+<h3 id="cache">Cache</h3>
+<ul>
+<li>Some of our APIs are cached. Using <code>"ignore_cache": true</code> in the request body to ignore it</li>
+</ul>
+<h3 id="mockup-for-test">Mockup for test</h3>
+<ul>
+<li>For quick testing and cost saving, using <code>"mockup_for_test": true</code> in the request body to mockup LLM and other costly 3rd party APIs (other functions will still be real)</li>
+</ul>
+<!-- Following contests are API specs -->
+
+<h2 id="api-specs">API Specs</h2>
+<h3 id="post-monitor">POST /monitor</h3>
+<p><code>POST https://&lt;api_end_point&gt;/monitor</code></p>
+<p><strong>Query Parameters</strong></p>
+<ul>
+<li><code>mode</code>: Optional - ['normal' (default) | 'dry_run' | 'test_run'], 'normal' will submit a monitor, 'dry_run' will only return generated code without running, 'test_run' will ignore trigger and run it instantly</li>
+</ul>
+<p><strong>Post Body Specification:</strong></p>
+<ul>
+<li><code>edit_id</code> a edit session id, the edit has to be ready (ref: the monitor edit spec)</li>
+<li><code>ignore_cache</code> only works in <code>test_run</code> mode</li>
+</ul>
+<p><strong>Curl samples</strong></p>
+<pre><code class="language-shell">curl -X POST &quot;https://&lt;api_end_point&gt;/monitor&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '@payload.json'
+</code></pre>
+<p>For test_run</p>
+<pre><code class="language-shell">curl -X POST &quot;https://&lt;api_end_point&gt;/monitor?mode=test_run&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '@payload.json'
+</code></pre>
+<p>For dry_run</p>
+<pre><code class="language-shell">curl -X POST &quot;https://&lt;api_end_point&gt;/monitor?mode=dry_run&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '@payload.json'
+</code></pre>
+<p><strong>Post Body Specification:</strong></p>
+<ul>
+<li><code>edit_id</code>: the uuid of edit</li>
+</ul>
+<p><strong>Sample payloads</strong></p>
+<pre><code class="language-json">{
+  &quot;edit_id&quot;: &quot;93ae23df-2cb2-4bf5-a9dd-3b638e01fb21&quot;
+}
+</code></pre>
+<p>for test_run only</p>
+<pre><code class="language-json">{
+  &quot;ignore_cache&quot;: true,
+  &quot;edit_id&quot;: &quot;93ae23df-2cb2-4bf5-a9dd-3b638e01fb21&quot;
+}
+</code></pre>
+<p><strong>Response Specification:</strong></p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;443c7548-77f2-45e2-b0ea-4ac99cca858d&quot;,
+  &quot;message&quot;: &quot;the monitor has successfully submitted, it will run at 6pm EDT everyday&quot;,
+  &quot;activated&quot;: true
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;443c7548-77f2-45e2-b0ea-4ac99cca858d&quot;,
+  &quot;message&quot;: &quot;the monitor has submitted, but got error&quot;,
+  &quot;activated&quot;: false,
+  &quot;error&quot;: {
+    &quot;code&quot;: 500,
+    &quot;message&quot;: &quot;the executor server has error. details...&quot;
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;443c7548-77f2-45e2-b0ea-4ac99cca858d&quot;,
+  &quot;message&quot;: &quot;the monitor has submitted, but missing a required input sources&quot;,
+  &quot;activated&quot;: false,
+  &quot;error&quot;: {
+    &quot;code&quot;: 400,
+    &quot;message&quot;: &quot;miss an input. details...&quot;
+  }
+}
+</code></pre>
+<p><code>id</code> in the above response is the "monitor id"(NOT edit_id), use it to query running status in the future</p>
+<p>test_run mode response</p>
+<pre><code class="language-json">{
+    &quot;id&quot;: &quot;fb50f60a-4787-4015-a6c0-aada3eea54d2&quot;, 
+    &quot;monitor_id&quot;: &quot;fb50f60a-4787-4015-a6c0-aada3eea54d2&quot;,
+    &quot;message&quot;: &quot;the monitor has tested&quot;,
+    &quot;checks&quot;: [
+        {
+            &quot;id&quot;: &quot;8c6ffde1-9df8-40a6-b953-3ae1cfcfc1ab&quot;,
+            &quot;description&quot;: &quot;&lt;generate check description here&gt;&quot;,
+            &quot;instruction&quot;: &quot;LLM prompt for this check&quot;
+        },
+        {
+            &quot;id&quot;: &quot;aac7c074-c8ec-46a5-b887-ba718ad99f31&quot;,
+            &quot;description&quot;: &quot;&lt;generate another check description here&gt;&quot;,
+            &quot;instruction&quot;: &quot;LLM prompt for this check&quot;
+        }
+    ],
+    &quot;items&quot;: [
+        {
+            &quot;item&quot;: &quot;Copy of Transcript 14.pdf&quot;,
+            &quot;status&quot;: &quot;passed&quot;,
+            &quot;media&quot;: [&quot;url of image if any, like saved proof of audition results&quot;],
+            &quot;results&quot;: [
+                {
+                    &quot;check_id&quot;: &quot;8c6ffde1-9df8-40a6-b953-3ae1cfcfc1ab&quot;,
+                    &quot;excerpt&quot;: &quot;['... we have a scheduled appointment for today to go over the MSW program. Is that still an option? ...', '... our program is 100% online, so you won\\'t have to worry about going anywhere. ...']&quot;,
+                    &quot;explanation&quot;: &quot;The document passed because there were no specific instructions given to compare the highlights against. The highlights provide a comprehensive overview of the conversation between the counselor and the potential student, covering topics such as the student's background, details about the MSW program, tuition costs, and next steps in the application process.&quot;,
+                    &quot;index&quot;: 1,
+                    &quot;highlight_area&quot;: {
+                        &quot;from&quot;: {
+                            &quot;x&quot;: &quot;70%&quot;,
+                            &quot;y&quot;: &quot;10%&quot;
+                        },
+                        &quot;to&quot;: {
+                            &quot;x&quot;: &quot;90%&quot;,
+                            &quot;y&quot;: &quot;20%&quot;
+                        }
+                    },
+                    &quot;status&quot;: &quot;passed&quot;,
+                    &quot;timestamp&quot;: &quot;2024-07-02T19:35:11.679956&quot;
+                },
+                {
+                    &quot;check_id&quot;: &quot;aac7c074-c8ec-46a5-b887-ba718ad99f31&quot;,
+                    &quot;excerpt&quot;: &quot;['... we have a scheduled appointment for today to go over the MSW program. Is that still an option? ...', '... our program is 100% online, so you won\\'t have to worry about going anywhere. ...']&quot;,
+                    &quot;explanation&quot;: &quot;The document passed because there were no specific instructions given to compare the highlights against. The highlights provide a comprehensive overview of the conversation between the counselor and the potential student, covering topics such as the student's background, details about the MSW program, tuition costs, and next steps in the application process.&quot;,
+                    &quot;status&quot;: &quot;passed&quot;,
+                    &quot;timestamp&quot;: &quot;2024-07-02T19:35:11.679956&quot;
+                }
+            ]
+        },
+        {
+            &quot;item&quot;: &quot;Copy of Transcript 13.pdf&quot;,
+            &quot;status&quot;: &quot;passed&quot;,
+            &quot;results&quot;: [
+                {
+                    &quot;check_id&quot;: &quot;8c6ffde1-9df8-40a6-b953-3ae1cfcfc1ab&quot;,
+                    &quot;excerpt&quot;: &quot;['... we have a scheduled appointment for today to go over the MSW program. Is that still an option? ...', '... our program is 100% online, so you won\\'t have to worry about going anywhere. ...']&quot;,
+                    &quot;explanation&quot;: &quot;The document passed because there were no specific instructions given to compare the highlights against. The highlights provide a comprehensive overview of the conversation between the counselor and the potential student, covering topics such as the student's background, details about the MSW program, tuition costs, and next steps in the application process.&quot;,
+                    &quot;status&quot;: &quot;passed&quot;,
+                    &quot;timestamp&quot;: &quot;2024-07-02T19:35:11.679956&quot;
+                },
+                {
+                    &quot;check_id&quot;: &quot;aac7c074-c8ec-46a5-b887-ba718ad99f31&quot;,
+                    &quot;excerpt&quot;: &quot;['... we have a scheduled appointment for today to go over the MSW program. Is that still an option? ...', '... our program is 100% online, so you won\\'t have to worry about going anywhere. ...']&quot;,
+                    &quot;explanation&quot;: &quot;The document passed because there were no specific instructions given to compare the highlights against. The highlights provide a comprehensive overview of the conversation between the counselor and the potential student, covering topics such as the student's background, details about the MSW program, tuition costs, and next steps in the application process.&quot;,
+                    &quot;status&quot;: &quot;passed&quot;,
+                    &quot;timestamp&quot;: &quot;2024-07-02T19:35:11.679956&quot;
+                }
+            ]
+        }
+    ],
+    &quot;error&quot;: null,
+    &quot;progress&quot;: 1,
+    &quot;start_time&quot;: &quot;2024-07-02T19:35:11.679956&quot;,
+    &quot;end_time&quot;: &quot;2024-07-02T19:35:12.679956&quot;,
+    &quot;duration&quot;: &quot;PT1M&quot;,
+    &quot;details&quot;: {
+        &quot;summary&quot;: &quot;passed with no problem&quot;,
+        &quot;data&quot;: &quot;#arbitrary Markdown payload&quot;
+    },
+    &quot;mode&quot;: &quot;test_run&quot;,
+    &quot;cached&quot;: true
+}
+</code></pre>
+<p>Note: <code>media</code>, <code>index</code>, <code>highlight_area</code> is only for image analysis tasks</p>
+<p>Notes: 
+* For test_run only, include <code>run result</code> in response, and No <code>id</code> (monitor id) is returned, since no actual monitor created. 
+* For <code>dry_run</code>, no execution result, it is for internal debug only.</p>
+<h3 id="get-monitorid-tbd-we-are-using-firebase-storage-monitor-right-now">GET /monitor/{id} -- (TBD, we are using firebase storage monitor right now)</h3>
+<p>Get a submitted monitor</p>
+<p><strong>Response Specification:</strong></p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;soc2-5e7562ec-9709-486e-a331-ae36bcf8ed90&quot;,
+  &quot;name&quot;: &quot;name of the monitor&quot;,
+  &quot;description&quot;: &quot;desc of the monitor&quot;,
+  &quot;cached&quot;: true,
+  &quot;createdAt&quot;: &quot;2024-05-07T-15:50+00&quot;,
+  &quot;modifiedAt&quot;: &quot;2024-05-07T-15:50+00&quot;,
+  &quot;objective&quot;: {
+    &quot;text&quot;: &quot;ensure SoC2 compliant&quot;,
+    &quot;category&quot;: &quot;soc2-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;
+  },
+  &quot;control&quot;: {
+    &quot;text&quot;: &quot;xyz&quot;,
+    &quot;category&quot;: &quot;control_xyz-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;
+  },
+  &quot;activity&quot;: {
+    &quot;text&quot;: &quot;validate that enrollment agents do not engage in high pressure sales tactics&quot;,
+    &quot;category&quot;: &quot;chat_log_doc-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;
+  },
+  &quot;runs&quot;: [
+    {
+      &quot;id&quot;: &quot;fb50f60a-4787-4015-a6c0-aada3eea54d2&quot;,
+      &quot;status&quot;: &quot;success&quot;,
+      &quot;error&quot;: null,
+      &quot;progress&quot;: 1,
+      &quot;start_time&quot;: &quot;2024-05-07T-15:50+00&quot;,
+      &quot;end_time&quot;: &quot;2024-05-07T-15:50+00&quot;,
+      &quot;duration&quot;: &quot;PT1M&quot;,
+      &quot;checks&quot;: [],
+      &quot;items&quot;: [],
+      &quot;details&quot;: {
+        &quot;summary&quot;: &quot;text summary&quot;,
+        &quot;data&quot;: &quot;#arbitrary Markdown payload&quot;
+      }
+    }
+  ],
+  &quot;trial&quot;: {
+    &quot;id&quot;: &quot;fb50f60a-4787-4015-a6c0-aada3eea54d2&quot;,
+    &quot;status&quot;: &quot;success&quot;,
+    &quot;error&quot;: null,
+    &quot;progress&quot;: 1,
+    &quot;start_time&quot;: &quot;2024-05-07T-15:50+00&quot;,
+    &quot;end_time&quot;: &quot;2024-05-07T-15:50+00&quot;,
+    &quot;duration&quot;: &quot;PT1M&quot;,
+    &quot;checks&quot;: [],
+    &quot;items&quot;: [],
+    &quot;details&quot;: {
+      &quot;summary&quot;: &quot;text summary&quot;,
+      &quot;data&quot;: &quot;#arbitrary Markdown payload&quot;
+    }
+  }
+}
+</code></pre>
+<h3 id="get-monitoridruns-tbd-we-are-using-firebase-storage-monitor-right-now">GET /monitor/{id}/runs -- (TBD, we are using firebase storage monitor right now)</h3>
+<p>Only show a monitor's execution results (with filter, sort, ranking)</p>
+<h2 id="post-monitoredit">POST /monitor/edit</h2>
+<p>Initiates a session for creating a new monitor. This is the essential API for the experience of monitor creation</p>
+<p><strong>Post Body Specification:</strong></p>
+<ul>
+<li><code>inputs</code> : Users inputs to specify the edit</li>
+<li><code>context</code>: Optional - other context help AI to plan tasks</li>
+<li><code>objective</code> Optional - the big goal</li>
+<li><code>text</code>: Natural language description of the objective of the activity. part of AI input</li>
+<li><code>control</code> Optional - the control</li>
+<li><code>text</code>: Natural language description of the objective of the activity. part of AI input</li>
+<li><code>activity</code>: Required <strong>use to be called <code>objective</code> in api</strong>:</li>
+<li><code>text</code>: Natural language description of the objective of the activity. part of AI input</li>
+</ul>
+<p>** Validation</p>
+<ul>
+<li>text: length &gt; 10 words </li>
+<li>inputs-&gt;source: a link start with "gs://" or "https://" (we only support google storage and google drive urls so far)</li>
+<li>inputs-&gt;check_*: the length of its instruction &gt; 10 words</li>
+<li>at least one check, maximum 5 checks</li>
+<li>(TBD more will coming soon)</li>
+</ul>
+<p><strong>Example Request:</strong></p>
+<pre><code class="language-shell">curl -X POST &quot;https://&lt;api_end_point&gt;/monitor/edit&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '@payload.json'
+</code></pre>
+<p><strong>Sample payloads</strong></p>
+<p>NOTE: Send an empty payload will return an edit id, category is <code>unknown</code>, UI can use this to start rendering without waiting AI's time consuming operations</p>
+<pre><code class="language-json">{}
+</code></pre>
+<p>NOTE: activity can be updated in PATCH calls as well</p>
+<pre><code class="language-json">{
+  &quot;activity&quot;: {
+    &quot;text&quot;: &quot;Title: Ensure website has proper disclosures and accurate and substantiated contents Description: Verify website has proper disclosure that this site is created and maintained by Risepoint&quot;
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;activity&quot;: {
+    &quot;text&quot;: &quot;Ensure website has proper disclosures and accurate and substantiated contents&quot;
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;objective&quot;: {},
+  &quot;control&quot;: {},
+  &quot;activity&quot;: {
+    &quot;text&quot;: &quot;Ensure website has proper disclosures and accurate and substantiated contents&quot;
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+    &quot;activity&quot;: {
+        &quot;text&quot;: &quot;validate that enrollment agents do not engage in high pressure sales tactics&quot;,
+    },
+    &quot;context&quot; : [
+        {
+            &quot;type&quot;: &quot;text&quot;,
+            &quot;data&quot; &quot;SOC2 is a compliant standard for data privacy&quot;
+        },
+        {
+            &quot;type&quot;: &quot;link&quot;,
+            &quot;data&quot; &quot;@lunaraspcect/common/SoC2/full_text&quot;
+        }
+    ]
+}
+</code></pre>
+<p>For internal usage only: you can force a category and give inputs to make the edit "ready" instantly</p>
+<pre><code class="language-json">{
+  &quot;activity&quot;: {
+    &quot;text&quot;: &quot;Title: Ensure website has proper disclosures and accurate and substantiated contents Description: Verify website has proper disclosure that this site is created and maintained by Wiley or Academic Partnerships.&quot;
+  },
+  &quot;category&quot;: &quot;generic_web-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;,
+  &quot;inputs&quot;: [
+    {
+      &quot;id&quot;: &quot;source&quot;,
+      &quot;value&quot;: &quot;gs://lunaraspect-dev.appspot.com/acme/monitors/4n8jIBIpe5ARA85h37De/flow/abc.csv&quot;
+    }
+  ]
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;activity&quot;: {
+    &quot;text&quot;: &quot;Title: Ensure website has proper disclosures and accurate and substantiated contents Description: Verify website has proper disclosure that this site is created and maintained by Wiley or Academic Partnerships.&quot;
+  },
+  &quot;category&quot;: &quot;generic_web-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;,
+  &quot;inputs&quot;: [
+    {
+      &quot;id&quot;: &quot;source&quot;,
+      &quot;value&quot;: &quot;gs://lunaraspect-dev.appspot.com/acme/monitors/4n8jIBIpe5ARA85h37De/flow/abc.csv&quot;
+    },
+    {
+      &quot;id&quot;: &quot;check_1&quot;,
+      &quot;value&quot;: {
+        &quot;id&quot;: &quot;&lt;check uuid&gt;&quot;,
+        &quot;description&quot;: &quot;&lt;description of this check, For UI display like title, user may edit it as well&gt;&quot;,
+        &quot;instruction&quot;: &quot;&lt;default text from suggested checks, or user edit based on it&gt;&quot;,
+        &quot;confirmed&quot;:true,
+        &quot;edited&quot;:true
+      }
+    },
+  ]
+}
+</code></pre>
+<p><strong>Response Specification:</strong></p>
+<ul>
+<li><code>id</code> a short lived session id, each <code>edit</code> will create a new one, front-end need to save it for further communication such as adding inputs.</li>
+<li><code>category</code> AI suggest this for future process (e.g., load prompt template, data process strategy)</li>
+<li><code>ready</code> if this monitor edit is ready to submit (collected all the necessary information)</li>
+<li><code>objective</code> same as input</li>
+<li><code>flow</code> the planned tasks in a workflow, AI will ask user for required inputs to make each step ready (complete)</li>
+<li>"trigger": only "schedule" type supported so far. under spec, "schedule" is cron job like string "0 0 1 * *", "since" is iso8601 time string "2024-07-15T13:15:48.609971+00:00"</li>
+<li>"return": TBD </li>
+</ul>
+<pre><code class="language-json">{
+    &quot;id&quot;:&quot;93ae23df-2cb2-4bf5-a9dd-3b638e01fb21&quot;,
+    &quot;category&quot;: &quot;chat_log_doc-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;,
+    &quot;ready&quot;: false,
+    &quot;inputs&quot;: [],
+    &quot;context&quot; : [
+        {
+            &quot;type&quot;: &quot;text&quot;,
+            &quot;data&quot; &quot;Some user specified text context input into llm&quot;
+        },
+        {
+            &quot;type&quot;: &quot;link&quot;,
+            &quot;data&quot; &quot;@lunaraspcect/common/SoC2/full_text&quot;
+        }
+    ]
+}
+</code></pre>
+<h2 id="post-monitoridedit">POST /monitor/{id}/edit</h2>
+<p>Use this for editing an existing monitor</p>
+<p>Almost identical as <code>POST /monitor/edit</code></p>
+<ul>
+<li>response includes a "monitor_id"</li>
+<li>context will say this is editing an existing monitor</li>
+</ul>
+<pre><code class="language-shell">curl -X POST &quot;https://&lt;api_end_point&gt;/monitor/&lt;id&gt;/edit&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '@payload.json'
+</code></pre>
+<p>Note: the monitor edit typically requires inputs: 1. source (where to get data) 2. check actions aka. checks (what to do with data). 3. other running info (e.g., when to run, return format). Some inputs will be giving by AI as suggested inputs, user can confirm or change them, instead of input themselves.</p>
+<h2 id="patch-monitoreditid">PATCH /monitor/edit/{id}</h2>
+<p>Add inputs or other changes to <code>edit</code> with the session id</p>
+<p><strong>Post Body Specification:</strong></p>
+<ul>
+<li><code>inputs</code>: inputs received from user</li>
+<li><code>context</code>: extra context</li>
+<li><code>category</code>: user overwrite suggest category, has to be a string in allowed list (useful if AI says unknown)</li>
+<li><code>return</code>: return format natural language description from user</li>
+<li><code>trigger</code>: trigger natural language description from user</li>
+<li><code>category</code>: overwrite AI predict category (has to be in a list of options)</li>
+<li><code>activity</code>: same as post, here is the deferred update</li>
+</ul>
+<p>The payload can have only one of them, but not combined
+For inputs and context, the value can by either array "[]" (add many) or single object "{}" (add one)</p>
+<p><strong>Example Request:</strong></p>
+<pre><code class="language-shell">curl -X PATCH &quot;https://&lt;api_end_point&gt;/edit/&lt;edit_id&gt;&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '@payload.json'
+</code></pre>
+<p><strong>Sample payloads</strong></p>
+<pre><code class="language-json">{
+  &quot;inputs&quot;: [{ &quot;id&quot;: &quot;source&quot;, &quot;value&quot;: &quot;gs://lunaraspect-dev.appspot.com/acme/monitors/4n8jIBIpe5ARA85h37De/flow&quot; }]
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;inputs&quot;: { &quot;id&quot;: &quot;source&quot;, &quot;value&quot;: &quot;gs://lunaraspect-dev.appspot.com/andrii/monitors/GLaecFq8Y2bwhdTjj158/flow&quot; }
+}
+</code></pre>
+<!-- this one will copy value from suggested checks in step -->
+
+<pre><code class="language-json">{
+    &quot;inputs&quot;: {
+        &quot;id&quot;: &quot;check_1&quot;,
+        &quot;action&quot;: &quot;confirm&quot;  
+    }
+}
+</code></pre>
+<!-- TBD: this one will allow user edit its desc and inst -->
+
+<pre><code class="language-json">{
+    &quot;inputs&quot;: {
+        &quot;id&quot;: &quot;check_1&quot;,
+        &quot;action&quot;: &quot;edit&quot;,  
+        &quot;value&quot;: {
+          &quot;description&quot;: &quot;new value of desc&quot;,
+          &quot;instruction&quot;: &quot;new value of instruction&quot;
+        }
+    }
+}
+</code></pre>
+<!-- TBD: delete an input -->
+
+<pre><code class="language-json">{
+    &quot;inputs&quot;: {
+        &quot;id&quot;: &quot;check_1&quot;,
+        &quot;action&quot;: &quot;delete&quot;,
+    }
+}
+</code></pre>
+<pre><code class="language-json">{
+    &quot;context&quot;: {
+        &quot;type&quot;: &quot;user_instruction&quot;,
+        &quot;data&quot;: &quot;I want to check profanity words as well&quot;
+    }
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;trigger&quot;: {
+    &quot;description&quot;: &quot;everyday 7pm EDT&quot;
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;return&quot;: {
+    &quot;result&quot;: &quot;user input result in NL&quot;
+  }
+}
+</code></pre>
+<pre><code class="language-json">{
+  &quot;category&quot;: &quot;chat_log_doc-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;
+}
+</code></pre>
+<p>So far, we only allow users to input those fields.</p>
+<h2 id="get-monitoreditid">GET /monitor/edit/{id}</h2>
+<p>Get the <code>edit</code> info by session id</p>
+<p><strong>Example Request:</strong></p>
+<pre><code class="language-shell">curl -X GET &quot;https://&lt;api_end_point&gt;/monitor/edit/&lt;id&gt;&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+</code></pre>
+<pre><code class="language-shell">curl -X GET &quot;https://&lt;api_end_point&gt;/monitor/edit/&lt;id&gt;?filter=plabook&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+</code></pre>
+<p><strong>Response Specification:</strong></p>
+<p>Sample as <code>POST /monitor/edit</code></p>
+<pre><code class="language-json">{
+    &quot;id&quot;:&quot;93ae23df-2cb2-4bf5-a9dd-3b638e01fb21&quot;,
+    &quot;category&quot;: &quot;chat_log_doc-5e7562ec-9709-486e-a331-ae36bcf8ed99&quot;,
+    &quot;ready&quot;: false,
+    &quot;inputs&quot;: [
+        {
+            &quot;id&quot;: &quot;input_name_1&quot;,
+            &quot;value&quot;: &quot;abc&quot;
+        },
+        {
+            &quot;id&quot;: &quot;input_name_2&quot;,
+            &quot;value&quot;: {&quot;key&quot;:&quot;value&quot;}
+        }
+    ],
+    &quot;flow&quot;: {
+       &quot;trigger&quot;: {
+            &quot;default&quot;: {
+                &quot;description&quot;: &quot;Everyday 12am CDT&quot;,
+                &quot;event&quot;: {
+                    &quot;type&quot;: &quot;schedule&quot;,
+                    &quot;spec&quot;: {
+                        &quot;schedule&quot;: &quot;0 0 1 * *&quot;,
+                        &quot;since&quot;: &quot;2024-07-15T13:15:48.609971+00:00&quot;
+                    }
+                }
+            }
+        },
+        &quot;return&quot;: {
+            &quot;default&quot;: {
+                &quot;result&quot;: &quot;Default format&quot;,
+                &quot;fields&quot;: [
+                    {
+                        &quot;name&quot;: &quot;Result&quot;,
+                        &quot;type&quot;: &quot;text&quot;,
+                        &quot;description&quot;: &quot;Fail if any violations are detected&quot;
+                    },
+                    {
+                        &quot;name&quot;: &quot;Summary&quot;,
+                        &quot;type&quot;: &quot;text&quot;,
+                        &quot;description&quot;: &quot;Number of checks run, passed and failed&quot;
+                    }
+                ],
+                &quot;scale&quot;: {
+                    &quot;threshold&quot;: 1,
+                    &quot;type&quot;: &quot;pass_if_le&quot;,
+                    &quot;min&quot;: 0.5,
+                    &quot;max&quot;: 0.8,
+                    &quot;is_percent&quot;: true
+                },
+                &quot;summary&quot;: &quot;&quot;,
+                &quot;data&quot;: &quot;&quot;
+            }
+        },    
+        &quot;steps&quot;: [
+        {
+            &quot;id&quot;: &quot;s1&quot;,
+            &quot;name&quot;: &quot;step 1&quot;,
+            &quot;parameters&quot;: [
+               {
+                &quot;type&quot;: &quot;required&quot;,
+                &quot;name&quot;:&quot;input_name_1 for UI&quot;,
+                &quot;mapping&quot;:&quot;input_name_1&quot;,
+                &quot;default&quot;: &quot;abc&quot;
+               }
+            ],
+            &quot;description&quot;: &quot;Where to get url&quot;,
+            &quot;completed&quot;:false
+        },
+        {
+            &quot;id&quot;: &quot;s2&quot;,
+            &quot;name&quot;: &quot;step 2&quot;,
+            &quot;parameters&quot;: [
+                {
+                &quot;type&quot;: &quot;optional&quot;,
+                &quot;name&quot;:&quot;name for UI&quot;,
+                &quot;mapping&quot;:&quot;input_name_2&quot;,
+                &quot;default&quot;: {&quot;key&quot;:&quot;df&quot;},
+                }
+            ],
+            &quot;description&quot;: &quot;Check website has proper user consent form&quot;,
+            &quot;completed&quot;:false
+        }
+        ]
+    },
+    &quot;context&quot; : [
+        {
+            &quot;type&quot;: &quot;text&quot;,
+            &quot;data&quot; &quot;Some user specified text context input into llm&quot;
+        },
+        {
+            &quot;type&quot;: &quot;link&quot;,
+            &quot;data&quot; &quot;@lunaraspcect/common/SoC2/full_text&quot;
+        }
+    ]
+}
+</code></pre>
+<!-- Change this into  add, edit, delete checks-->
+<h3 id="add-edit-delete-steps-checks">Add, edit, delete ~~steps~~ checks</h3>
+<ul>
+<li><strong>HOMER: flow steps is read only</strong></li>
+<li>edit "inputs" instead, flow steps will change accordingly by mapping association.</li>
+<li>Only check (what to do with data) can be added, other types such as source is edit only (no add, no delete)</li>
+<li>Change check will not add a "user_instruction" context anymore (since we already have it in inputs), that context will be used for other purpose</li>
+</ul>
+<p>*** PATCH /monitor/edit/<edit_id> ***</p>
+<p>use the default value</p>
+<pre><code class="language-shell">curl -X PATCH &quot;https://&lt;api_end_point&gt;/monitor/edit/&lt;edit_id&gt;&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    “inputs”: {
+        “id”: “check_1”,
+        “action”: “confirm”
+    }
+}'
+</code></pre>
+<p>*** update a check ***</p>
+<pre><code class="language-shell">curl -X PATCH &quot;https://&lt;api_end_point&gt;/monitor/edit/&lt;edit_id&gt;&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    &quot;inputs: {
+      &quot;id&quot;: &quot;check_1&quot;,
+      &quot;action&quot;: &quot;update&quot;,
+      &quot;value&quot;: {
+        &quot;description&quot;: &quot;&lt;description of this check, For UI display like title, user may edit it as well&gt;&quot;,
+        &quot;instruction&quot;: &quot;&lt;default text from suggested checks, or user edit based on it&gt;&quot;,
+      }
+    }
+}'
+</code></pre>
+<p><strong><em>remove a check (same as add a check type input)</em></strong></p>
+<pre><code class="language-shell">curl -X PATCH &quot;https://&lt;api_end_point&gt;/monitor/edit/&lt;edit_id&gt;&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    &quot;inputs: {
+      &quot;id&quot;: &quot;check_1&quot;,
+      &quot;action&quot;: &quot;remove&quot;
+    }
+}'
+</code></pre>
+<p><strong><em>To add a new check by user's typing text</em></strong></p>
+<p>Note: we use to do it by adding context “user-instruction” -- depreciated. 
+Simply patch a input, use same desc and instruction for moment</p>
+<pre><code>{
+    &quot;inputs&quot;: {
+        &quot;id&quot;: &quot;check_1&quot;,
+        &quot;value&quot;: {
+          &quot;description&quot;: &quot;new value of desc&quot;,
+          &quot;instruction&quot;: &quot;same as desc, we may user AI enriched on later&quot;
+        }
+    }
+}
+</code></pre>
+<!-- Legacy one
+
+<pre><code class="language-json">{
+    &quot;context&quot;: {
+        &quot;type&quot;: &quot;user_instruction&quot;,
+        &quot;action&quot;: &quot;remove_step&quot;,
+        &quot;data&quot;: &quot;Check for profanity words&quot;,
+        &quot;step_id&quot;:&quot;s3&quot;, // internal id
+        &quot;mapping&quot;:&quot;check_financial_aid_advice&quot; // mapping field
+    }
+}
+</code></pre>
+
+
+### Add a step
+
+
+<pre><code class="language-shell">curl -X PATCH &quot;https://&lt;api_end_point&gt;/edit_id&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    &quot;context&quot;: {
+        &quot;type&quot;: &quot;user_instruction&quot;,
+        &quot;data&quot;: &quot;Check that website is squared&quot;,
+        &quot;action&quot;: &quot;add_step&quot;
+    }
+}'
+</code></pre>
+
+
+Description can be any text, action should be `add_step`
+
+## Remove a step
+
+
+<pre><code class="language-shell">curl -X PATCH &quot;https://&lt;api_end_point&gt;/edit_id&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    &quot;context&quot;: {
+        &quot;type&quot;: &quot;user_instruction&quot;,
+        &quot;data&quot;: &quot;&quot;,
+        &quot;action&quot;: &quot;remove_step&quot;,
+        &quot;step_id&quot;: &quot;s4&quot;
+    }
+}'
+</code></pre>
+
+
+## Update a step
+
+
+<pre><code class="language-shell">curl -X PATCH &quot;https://&lt;api_end_point&gt;/edit_id&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    &quot;context&quot;: {
+        &quot;type&quot;: &quot;user_instruction&quot;,
+        &quot;data&quot;: &quot;new step description&quot;,
+        &quot;step_id&quot;: &quot;s3&quot;,
+        &quot;action&quot;: &quot;update_step&quot;
+    }
+}'
+</code></pre>
+
+-->
+
+<p>~~## GET /monitor/{id}/edit/playbook~~</p>
+<h2 id="get-monitoreditidplaybook">GET /monitor/edit/{id}/playbook</h2>
+<p>This is a READ-ONLY api, all changes are calculated based on edit.</p>
+<p>** Response specification **</p>
+<pre><code class="language-json">{
+  &quot;type&quot;: &quot;sequence&quot;,
+  &quot;instructions&quot;: [
+    {
+      &quot;id&quot;: &quot;i1&quot;,
+      &quot;data&quot;: &quot;Say hello to the user, tell them they can do abc&quot;,
+      &quot;type&quot;: &quot;default&quot;,
+      &quot;completed&quot;: false,
+      &quot;choices&quot;: null
+    },
+    {
+      &quot;id&quot;: &quot;i1&quot;,
+      &quot;mapping&quot;: &quot;input_name_1&quot;,
+      &quot;data&quot;: &quot;markdown for ui, e.g., #where can I find urls?&quot;,
+      &quot;type&quot;: &quot;question&quot;,
+      &quot;completed&quot;: false,
+      &quot;choices&quot;: &quot;text&quot;
+    },
+    {
+      &quot;id&quot;: &quot;i2&quot;,
+      &quot;mapping&quot;: &quot;input_name_2&quot;,
+      &quot;data&quot;: &quot;markdown for ui&quot;,
+      &quot;type&quot;: &quot;default&quot;,
+      &quot;completed&quot;: false,
+      &quot;choices&quot;: &quot;boolean&quot;
+    }
+  ],
+  &quot;status&quot;: &quot;asking_input&quot;,
+  &quot;message&quot;: &quot;showing on chatbot about current conversation&quot;
+}
+</code></pre>
+<p>Note: "status" is used to implement the finite state machine(FSM), as beginning, we have three status "init" "asking_input" "ready". The instructions will be dynamic based on the context of conversation, AI will give updated instructions based what's going on (E.g., user upload a wrong file, ask he/her to try again)</p>
+<h2 id="submit-monitor-v2">Submit monitor v2</h2>
+<pre><code class="language-shell">curl -X POST &quot;https://&lt;api_end_point&gt;/v2/monitor?mode=test_run&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    &quot;edit_id&quot;: &quot;b1de0a89-d33e-4ac1-82f2-45061ae4f79a&quot;,
+    &quot;ignore_cache&quot;: true
+}'
+</code></pre>
+<h2 id="response">Response</h2>
+<pre><code class="language-json">{
+  &quot;cache_key&quot;: &quot;monitor-edit-f79c5d315c3a7fd8a566b918be661d22&quot;,
+  &quot;cache_data&quot;: {
+    &quot;message&quot;: &quot;Your monitor has been submitted&quot;,
+    &quot;status&quot;: &quot;submitted&quot;,
+    &quot;mode&quot;: &quot;test_run&quot;
+  }
+}
+</code></pre>
+<h2 id="status-of-monitor-submitted-in_progress-failed-tested">Status of monitor - submitted, in_progress, failed, tested</h2>
+<h2 id="proceed-monitor-v2-called-after-submit-monitor-by-cloud-task">Proceed Monitor v2, called after submit monitor by Cloud Task</h2>
+<pre><code class="language-shell">curl -X POST &quot;https://&lt;api_end_point&gt;/v2/monitor/asynchronous?mode=test_run&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot; \
+ -d '{
+    &quot;edit_id&quot;: &quot;fd9e3095-eae8-47c4-a902-e34dab728cd1&quot;,
+    &quot;monitor_id&quot;: &quot;23cf684e-1979-4fd7-aba6-057688c80e75&quot;,
+    &quot;cache_key&quot;: &quot;monitor-edit-c64304b1b2174aff596ca2896e960089&quot;
+}'
+</code></pre>
+<h2 id="response_1">Response</h2>
+<pre><code class="language-json">{
+  &quot;message&quot;: &quot;Your monitor has failed&quot;,
+  &quot;status&quot;: &quot;failed&quot;,
+  &quot;result&quot;: {
+    &quot;error&quot;: &quot;Connection to 104.198.219.82 timed out. (connect timeout=500)))&quot;,
+    &quot;status&quot;: &quot;failed&quot;
+  },
+  &quot;mode&quot;: &quot;test_run&quot;
+}
+</code></pre>
+<!-- Homer: Let's merge this into test run, use the new response format -->
+<h2 id="get-monitor-result-v2">Get monitor result v2</h2>
+<pre><code class="language-shell">curl -X GET &quot;https://&lt;api_end_point&gt;/v2/monitor_result/{cache_key}&quot; \
+ -H &quot;Content-Type: application/json&quot; \
+ -H &quot;Authorization: Bearer your_token&quot;
+</code></pre>
+<h2 id="response_2">Response</h2>
+<pre><code class="language-json">{
+  &quot;message&quot;: &quot;Your monitor has tested&quot;,
+  &quot;status&quot;: &quot;tested&quot;,
+  &quot;result&quot;: {
+    &quot;results&quot;: {
+      &quot;message&quot;: &quot;Script executed successfully&quot;,
+      &quot;result&quot;: {
+        &quot;gs_url&quot;: &quot;https://storage.googleapis.com/ai-monitor-run-result-dev/1ef1e943-55c3-4d1d-a205-f0f2016c4a42/2024-06-25T14%3A57%3A21.887891.json&quot;,
+        &quot;results&quot;: [
+          {
+            &quot;excerpt&quot;: &quot;['... were you planning to utilize federal aid, or how are you planning to envision paying for your education? ...', '... there are a couple of additional fees, just so you are aware. So there is a $50 application fee, and then there is also a one-time matriculation fee of $350 that would just be applied to your first term bill. And then there are some additional fees on the cost per credit hour. ...']&quot;,
+            &quot;explanation&quot;: &quot;The document passed because the counselor's words did not contain any instances of instructed checks. The counselor asked the student about their plans for utilizing federal aid and informed them about the additional fees, but did not provide any advice or instructions. The counselor also encouraged the student to submit a FAFSA form, but this does not amount to an instructed check as it is a general recommendation and not a specific instruction. Therefore, the document is compliant with the instruction.&quot;,
+            &quot;item&quot;: &quot;Transcript 3.pdf&quot;,
+            &quot;status&quot;: &quot;passed&quot;
+          },
+          {
+            &quot;excerpt&quot;: &quot;['...we do have a scholarship right now for five beta Kappa. As long as you provide some kind of verification for it...', '...Were you thinking of potentially applying for financial aid to help with your investment?...']&quot;,
+            &quot;explanation&quot;: &quot;The document failed to comply with the instructions. The counselor was found discussing financial aid options with the prospective student, which is against the instructions. The counselor mentioned a scholarship for five beta Kappa and asked the student if they were considering applying for financial aid. These instances indicate that the counselor was providing advice on financial aid, which is not allowed according to the instructions.&quot;,
+            &quot;item&quot;: &quot;Transcript 1.pdf&quot;,
+            &quot;status&quot;: &quot;failed&quot;
+          }
+        ],
+        &quot;timestamp&quot;: &quot;2024-06-25_14-57-21&quot;
+      },
+      &quot;status&quot;: &quot;complete&quot;
+    },
+    &quot;status&quot;: &quot;passed&quot;,
+    &quot;headers&quot;: [&quot;item&quot;, &quot;status&quot;, &quot;explanation&quot;, &quot;excerpt&quot;]
+  },
+  &quot;mode&quot;: &quot;test_run&quot;
+}
+</code></pre>
+<h2 id="error">Error</h2>
+<p>For server-side errors, use this format to response</p>
+<pre><code class="language-json">{
+  &quot;error&quot;: {
+    &quot;code&quot;: 500,
+    &quot;message&quot;: &quot;the executor server has error. details...&quot;,
+    &quot;details&quot; &quot;&lt;debug info, only show in dev env&gt;&quot;
+  }
+}
+</code></pre>

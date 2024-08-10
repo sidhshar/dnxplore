@@ -4,3 +4,4 @@ mysqlclient
 django-ninja-jwt
 pydantic
 python-dotenv
+markdown
